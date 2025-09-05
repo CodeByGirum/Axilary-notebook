@@ -183,6 +183,17 @@ export function NotebookEditor({
       onOrderChange: setNextOrder,
     })
 
+  const handleAddCell = useCallback(
+    (type: CellType) => {
+      if (type === "text") {
+        addTextSection()
+      } else {
+        addCell(type)
+      }
+    },
+    [addCell, addTextSection],
+  )
+
   const handleExecuteCell = useCallback(
     async (cell: NotebookCellData) => {
       const result = await executeCell(cell)
@@ -472,7 +483,7 @@ export function NotebookEditor({
         />
       )}
 
-      <BlockSeparator onAddCell={(type) => addCell(type)} onAddSeparator={(style) => handleAddSeparator(style)} />
+      <BlockSeparator onAddCell={handleAddCell} onAddSeparator={(style) => handleAddSeparator(style)} />
     </div>
   )
 }
