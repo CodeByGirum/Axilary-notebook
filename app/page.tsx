@@ -1,20 +1,19 @@
 "use client"
 
 import type React from "react"
-
 import { cn } from "@/lib/utils"
 import { useState, useEffect, useCallback } from "react"
-import { NotebookEditor } from "@/components/notebook/notebook-editor"
+import { NotebookEditor } from "@/components/notebook/editor/NotebookEditor"
 import { NotebookPublisher } from "@/components/notebook/notebook-publisher"
 import { Sidebar } from "@/components/sidebar/sidebar"
 import { Button } from "@/components/ui/button"
 import { Eye, Edit3, Share, Download, Menu, Play, PlayCircle, Undo, Redo } from "lucide-react"
 import type { NotebookCellData } from "@/types/notebook"
-import { undoRedoManager } from "@/lib/undo-redo-manager"
 
 export default function NotebookPage() {
   const [isPublishMode, setIsPublishMode] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true) // Default to expanded
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSidebarHovered, setIsSidebarHovered] = useState(false)
   const [sidebarWidth, setSidebarWidth] = useState(320)
   const [isResizing, setIsResizing] = useState(false)
@@ -22,106 +21,91 @@ export default function NotebookPage() {
   const [title, setTitle] = useState("Welcome to Axilary Notebook")
   const [textSections, setTextSections] = useState<any[]>([])
 
-  const [canUndo, setCanUndo] = useState(false)
-  const [canRedo, setCanRedo] = useState(false)
+  const [history, setHistory] = useState<any[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
 
-  const createStateChangeCommand = useCallback(
-    (newCells: NotebookCellData[], newTitle: string, newTextSections: any[], description: string) => {
-      const oldCells = [...cells]
-      const oldTitle = title
-      const oldTextSections = [...textSections]
+  const saveToHistory = (newCells: NotebookCellData[], newTitle: string, newTextSections: any[]) => {
+    const newState = { cells: newCells, title: newTitle, textSections: newTextSections }
+    setHistory((prev) => {
+      const newHistory = [...prev.slice(0, historyIndex + 1), newState]
+      return newHistory.slice(-50) // Keep last 50 states
+    })
+    setHistoryIndex((prev) => prev + 1)
+  }
 
-      return {
-        description,
-        undo: () => {
-          setCells(oldCells)
-          setTitle(oldTitle)
-          setTextSections(oldTextSections)
-          localStorage.setItem("notebook-cells", JSON.stringify(oldCells))
-          localStorage.setItem("notebook-title", oldTitle)
-          localStorage.setItem("notebook-text-sections", JSON.stringify(oldTextSections))
-        },
-        redo: () => {
-          setCells(newCells)
-          setTitle(newTitle)
-          setTextSections(newTextSections)
-          localStorage.setItem("notebook-cells", JSON.stringify(newCells))
-          localStorage.setItem("notebook-title", newTitle)
-          localStorage.setItem("notebook-text-sections", JSON.stringify(newTextSections))
-        },
-      }
-    },
-    [cells, title, textSections],
-  )
+  const handleGlobalUndo = () => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1]
+      setCells(prevState.cells)
+      setTitle(prevState.title)
+      setTextSections(prevState.textSections)
+      setHistoryIndex(historyIndex - 1)
+
+      localStorage.setItem("notebook-cells", JSON.stringify(prevState.cells))
+      localStorage.setItem("notebook-title", prevState.title)
+      localStorage.setItem("notebook-text-sections", JSON.stringify(prevState.textSections))
+    }
+  }
+
+  const handleGlobalRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1]
+      setCells(nextState.cells)
+      setTitle(nextState.title)
+      setTextSections(nextState.textSections)
+      setHistoryIndex(historyIndex + 1)
+
+      localStorage.setItem("notebook-cells", JSON.stringify(nextState.cells))
+      localStorage.setItem("notebook-title", nextState.title)
+      localStorage.setItem("notebook-text-sections", JSON.stringify(nextState.textSections))
+    }
+  }
 
   useEffect(() => {
-    const updateUndoRedoState = () => {
-      setCanUndo(undoRedoManager.canUndo())
-      setCanRedo(undoRedoManager.canRedo())
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault()
+        handleGlobalUndo()
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault()
+        handleGlobalRedo()
+      }
     }
 
-    const handleStateChange = () => {
-      updateUndoRedoState()
-    }
-
-    document.addEventListener("app:stateChanged", handleStateChange)
-    updateUndoRedoState()
-
-    return () => {
-      document.removeEventListener("app:stateChanged", handleStateChange)
-    }
-  }, [])
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [history, historyIndex])
 
   useEffect(() => {
     const savedCells = localStorage.getItem("notebook-cells")
     const savedTitle = localStorage.getItem("notebook-title")
     const savedTextSections = localStorage.getItem("notebook-text-sections")
     const savedSidebarWidth = localStorage.getItem("sidebar-width")
+    const savedSidebarCollapsed = localStorage.getItem("sidebar-collapsed")
 
-    if (savedCells) {
-      setCells(JSON.parse(savedCells))
-    }
-    if (savedTitle) {
-      setTitle(savedTitle)
-    }
-    if (savedTextSections) {
-      setTextSections(JSON.parse(savedTextSections))
-    }
-    if (savedSidebarWidth) {
-      setSidebarWidth(Number.parseInt(savedSidebarWidth))
-    }
+    if (savedCells) setCells(JSON.parse(savedCells))
+    if (savedTitle) setTitle(savedTitle)
+    if (savedTextSections) setTextSections(JSON.parse(savedTextSections))
+    if (savedSidebarWidth) setSidebarWidth(Number.parseInt(savedSidebarWidth))
+    if (savedSidebarCollapsed) setIsSidebarCollapsed(JSON.parse(savedSidebarCollapsed))
   }, [])
 
-  const handleCellsChange = useCallback(
-    (newCells: NotebookCellData[]) => {
-      const command = createStateChangeCommand(newCells, title, textSections, "Cell changes")
-      undoRedoManager.executeCommand(command)
-    },
-    [createStateChangeCommand, title, textSections],
-  )
-
-  const handleTitleChange = useCallback(
-    (newTitle: string) => {
-      const command = createStateChangeCommand(cells, newTitle, textSections, "Title change")
-      undoRedoManager.executeCommand(command)
-    },
-    [createStateChangeCommand, cells, textSections],
-  )
-
-  const handleTextSectionsChange = useCallback(
-    (newTextSections: any[]) => {
-      const command = createStateChangeCommand(cells, title, newTextSections, "Text section changes")
-      undoRedoManager.executeCommand(command)
-    },
-    [createStateChangeCommand, cells, title],
-  )
-
-  const handleGlobalUndo = () => {
-    undoRedoManager.undo()
+  const handleCellsChange = (newCells: NotebookCellData[]) => {
+    setCells(newCells)
+    localStorage.setItem("notebook-cells", JSON.stringify(newCells))
+    saveToHistory(newCells, title, textSections)
   }
 
-  const handleGlobalRedo = () => {
-    undoRedoManager.redo()
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle)
+    localStorage.setItem("notebook-title", newTitle)
+    saveToHistory(cells, newTitle, textSections)
+  }
+
+  const handleTextSectionsChange = (newTextSections: any[]) => {
+    setTextSections(newTextSections)
+    localStorage.setItem("notebook-text-sections", JSON.stringify(newTextSections))
+    saveToHistory(cells, title, newTextSections)
   }
 
   const handleShare = () => {
@@ -155,14 +139,22 @@ export default function NotebookPage() {
     console.log("Running current cell...")
   }
 
+  const handleSidebarToggle = () => {
+    const newCollapsedState = !isSidebarCollapsed
+    setIsSidebarCollapsed(newCollapsedState)
+    localStorage.setItem("sidebar-collapsed", JSON.stringify(newCollapsedState))
+  }
+
   const handleSidebarMouseEnter = () => {
-    setIsSidebarHovered(true)
-    setIsSidebarOpen(true)
+    if (isSidebarCollapsed) {
+      setIsSidebarHovered(true)
+      setIsSidebarOpen(true)
+    }
   }
 
   const handleSidebarMouseLeave = () => {
-    setIsSidebarHovered(false)
-    if (!isSidebarOpen) {
+    if (isSidebarCollapsed) {
+      setIsSidebarHovered(false)
       setIsSidebarOpen(false)
     }
   }
@@ -174,46 +166,45 @@ export default function NotebookPage() {
     document.body.style.userSelect = "none"
   }, [])
 
-  const handleResizeMove = useCallback(
-    (e: MouseEvent) => {
+  useEffect(() => {
+    const handleResizeMove = (e: MouseEvent) => {
       if (!isResizing) return
-
       const newWidth = Math.max(200, Math.min(600, e.clientX))
       setSidebarWidth(newWidth)
-    },
-    [isResizing],
-  )
+    }
 
-  const handleResizeEnd = useCallback(() => {
-    if (!isResizing) return
+    const handleResizeEnd = () => {
+      if (!isResizing) return
+      setIsResizing(false)
+      document.body.style.cursor = ""
+      document.body.style.userSelect = ""
+      localStorage.setItem("sidebar-width", sidebarWidth.toString())
+    }
 
-    setIsResizing(false)
-    document.body.style.cursor = ""
-    document.body.style.userSelect = ""
-    localStorage.setItem("sidebar-width", sidebarWidth.toString())
-  }, [isResizing, sidebarWidth])
-
-  useEffect(() => {
     if (isResizing) {
       document.addEventListener("mousemove", handleResizeMove)
       document.addEventListener("mouseup", handleResizeEnd)
-
       return () => {
         document.removeEventListener("mousemove", handleResizeMove)
         document.removeEventListener("mouseup", handleResizeEnd)
       }
     }
-  }, [isResizing, handleResizeMove, handleResizeEnd])
+  }, [isResizing, sidebarWidth])
+
+  const effectiveSidebarOpen = !isSidebarCollapsed || isSidebarHovered
+  const effectiveSidebarWidth = effectiveSidebarOpen ? sidebarWidth : 48
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex">
       <Sidebar
-        isOpen={isSidebarOpen || isSidebarHovered}
+        isOpen={effectiveSidebarOpen}
+        isCollapsed={isSidebarCollapsed}
         width={sidebarWidth}
         onClose={() => {
           setIsSidebarOpen(false)
           setIsSidebarHovered(false)
         }}
+        onToggle={handleSidebarToggle}
         onMouseEnter={handleSidebarMouseEnter}
         onMouseLeave={handleSidebarMouseLeave}
         onResizeStart={handleResizeStart}
@@ -223,15 +214,16 @@ export default function NotebookPage() {
       <div className="flex-1 flex flex-col transition-all duration-300">
         <header
           className={`fixed top-0 right-0 z-50 bg-[#0f0f0f]/80 backdrop-blur-sm border-b border-white/5 transition-all duration-300`}
-          style={{ left: isSidebarOpen || isSidebarHovered ? `${sidebarWidth}px` : "48px" }}
+          style={{ left: `${effectiveSidebarWidth}px` }}
         >
           <div className="flex items-center justify-between px-6 py-3">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                onClick={handleSidebarToggle}
                 className="text-white/60 hover:text-white hover:bg-white/5"
+                title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
               >
                 <Menu className="h-4 w-4" />
               </Button>
@@ -239,7 +231,7 @@ export default function NotebookPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleGlobalUndo}
-                disabled={!canUndo}
+                disabled={historyIndex <= 0}
                 className="text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Global Undo (Ctrl+Z)"
               >
@@ -249,7 +241,7 @@ export default function NotebookPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleGlobalRedo}
-                disabled={!canRedo}
+                disabled={historyIndex >= history.length - 1}
                 className="text-white/60 hover:text-white hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed"
                 title="Global Redo (Ctrl+Shift+Z)"
               >
@@ -336,7 +328,7 @@ export default function NotebookPage() {
 
         <main
           className={`pt-16 flex-1 transition-all duration-300`}
-          style={{ marginLeft: isSidebarOpen || isSidebarHovered ? "0" : "48px" }}
+          style={{ marginLeft: `${effectiveSidebarWidth}px` }}
         >
           <div className={cn("transition-all duration-300", isPublishMode ? "py-12 px-6" : "p-10")}>
             {isPublishMode ? (

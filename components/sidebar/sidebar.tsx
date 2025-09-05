@@ -2,29 +2,17 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import {
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  RefreshCw,
-  Terminal,
-  BookOpen,
-  FolderOpen,
-  Power,
-  Cpu,
-  Zap,
-  Globe,
-  X,
-  Clock,
-} from "lucide-react"
+import { Plus, BookOpen, Power, Cpu, Zap, Globe, X, Clock, ChevronLeft, ChevronRight } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface SidebarProps {
   isOpen: boolean
+  isCollapsed: boolean
   width: number
   onClose: () => void
+  onToggle: () => void
   onMouseEnter?: () => void
   onMouseLeave?: () => void
   onResizeStart: (e: React.MouseEvent) => void
@@ -33,23 +21,42 @@ interface SidebarProps {
 
 export function Sidebar({
   isOpen,
+  isCollapsed,
   width,
   onClose,
+  onToggle,
   onMouseEnter,
   onMouseLeave,
   onResizeStart,
   isResizing,
 }: SidebarProps) {
-  const [expandedSections, setExpandedSections] = useState({
-    files: false,
-    terminals: false,
-  })
+  const [expandedSections, setExpandedSections] = useState({})
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isHovering, setIsHovering] = useState(false)
 
   const [selectedMachine, setSelectedMachine] = useState("cpu-basic")
   const [selectedEnvironment, setSelectedEnvironment] = useState("python-310-ds")
   const [selectedShutdown, setSelectedShutdown] = useState("15min")
   const [machineRunning, setMachineRunning] = useState(false)
   const [showShutdownMenu, setShowShutdownMenu] = useState(false)
+
+  const handleMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    setIsHovering(true)
+    onMouseEnter?.()
+  }
+
+  const handleMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsHovering(false)
+      onMouseLeave?.()
+    }, 500) // 500ms delay before hiding
+  }
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -142,48 +149,65 @@ export function Sidebar({
 
   return (
     <>
-      <div className="fixed left-0 top-0 w-2 h-full z-30 lg:block hidden" onMouseEnter={onMouseEnter} />
+      <div className="fixed left-0 top-0 w-2 h-full z-30 lg:block hidden" onMouseEnter={handleMouseEnter} />
 
       <div
-        className={`fixed inset-0 z-40 lg:relative lg:inset-auto transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-0 z-40 lg:relative lg:inset-auto transition-all duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         {/* Overlay for mobile */}
         <div className="absolute inset-0 bg-black/50 lg:hidden" onClick={onClose} />
 
         <div
-          className={`absolute left-0 top-0 h-full bg-[#0f0f0f] border-r border-white/5 flex flex-col lg:relative transition-all duration-300 ease-in-out ${
-            isOpen ? "" : "lg:w-12"
-          } overflow-hidden`}
+          className={`absolute left-0 top-0 h-full bg-[#0f0f0f] border-r border-white/5 flex flex-col lg:relative transition-all duration-300 ease-in-out overflow-hidden`}
           style={{
-            width: isOpen ? `${width}px` : isOpen ? `${width}px` : "0px",
-            minWidth: isOpen ? "200px" : "0px",
-            maxWidth: isOpen ? "600px" : "0px",
+            width: isOpen ? `${width}px` : "48px",
+            minWidth: isOpen ? "200px" : "48px",
+            maxWidth: isOpen ? "600px" : "48px",
           }}
         >
           <div
             className={`flex items-center justify-between border-b border-white/5 transition-all duration-300 ${
-              isOpen ? "p-4" : "p-2 lg:p-2"
+              isOpen ? "p-4" : "p-2"
             }`}
           >
             {isOpen ? (
               <>
                 <h2 className="text-sm font-medium text-white/90">Workspace</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClose}
-                  className="lg:hidden text-white/60 hover:text-white hover:bg-white/5"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onToggle}
+                    className="hidden lg:flex text-white/60 hover:text-white hover:bg-white/5"
+                    title="Collapse Sidebar"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClose}
+                    className="lg:hidden text-white/60 hover:text-white hover:bg-white/5"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </>
             ) : (
               <div className="hidden lg:flex flex-col items-center gap-2 w-full">
-                <BookOpen className="h-4 w-4 text-white/60" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onToggle}
+                  className="text-white/60 hover:text-white hover:bg-white/5 p-1"
+                  title="Expand Sidebar"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             )}
           </div>
@@ -212,66 +236,6 @@ export function Sidebar({
                 </div>
               </div>
 
-              {/* Files Section */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => toggleSection("files")}
-                    className="flex items-center gap-2 hover:bg-white/5 rounded p-1 min-w-0 flex-1"
-                  >
-                    {expandedSections.files ? (
-                      <ChevronDown className="h-4 w-4 text-white/60 flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-white/60 flex-shrink-0" />
-                    )}
-                    <FolderOpen className="h-4 w-4 text-white/60 flex-shrink-0" />
-                    <span className="text-sm font-medium text-white/80 truncate">Files</span>
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/5 flex-shrink-0"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                  </Button>
-                </div>
-                {expandedSections.files && (
-                  <div className="ml-6 space-y-1">
-                    <div className="text-xs text-white/40 py-1">No files</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Terminals Section */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => toggleSection("terminals")}
-                    className="flex items-center gap-2 hover:bg-white/5 rounded p-1 min-w-0 flex-1"
-                  >
-                    {expandedSections.terminals ? (
-                      <ChevronDown className="h-4 w-4 text-white/60 flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4 text-white/60 flex-shrink-0" />
-                    )}
-                    <Terminal className="h-4 w-4 text-white/60 flex-shrink-0" />
-                    <span className="text-sm font-medium text-white/80 truncate">Terminals</span>
-                  </button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/5 flex-shrink-0"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-                {expandedSections.terminals && (
-                  <div className="ml-6 space-y-1">
-                    <div className="text-xs text-white/40 py-1">No terminals</div>
-                  </div>
-                )}
-              </div>
-
               {/* Machine Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 min-w-0">
@@ -279,10 +243,10 @@ export function Sidebar({
                   <span className="text-sm font-medium text-white/80 truncate">Machine</span>
                 </div>
                 <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white/80 text-xs w-full">
+                  <SelectTrigger className="bg-black/40 border-white/30 text-white hover:bg-black/50 text-xs w-full">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-white/10">
+                  <SelectContent className="bg-[#1a1a1a] border-white/10" onCloseAutoFocus={(e) => e.preventDefault()}>
                     {machineOptions.map((option) => (
                       <SelectItem
                         key={option.value}
@@ -303,16 +267,17 @@ export function Sidebar({
                 </Select>
               </div>
 
+              {/* Environment Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <Zap className="h-4 w-4 text-white/60 flex-shrink-0" />
                   <span className="text-sm font-medium text-white/80 truncate">Environment</span>
                 </div>
                 <Select value={selectedEnvironment} onValueChange={setSelectedEnvironment}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white/80 text-xs w-full">
+                  <SelectTrigger className="bg-black/40 border-white/30 text-white hover:bg-black/50 text-xs w-full">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#1a1a1a] border-white/10">
+                  <SelectContent className="bg-[#1a1a1a] border-white/10" onCloseAutoFocus={(e) => e.preventDefault()}>
                     {environmentOptions.map((option) => (
                       <SelectItem
                         key={option.value}
@@ -337,12 +302,6 @@ export function Sidebar({
               <div className="p-2 rounded hover:bg-white/5 cursor-pointer" title="Notebooks">
                 <BookOpen className="h-4 w-4 text-white/60" />
               </div>
-              <div className="p-2 rounded hover:bg-white/5 cursor-pointer" title="Files">
-                <FolderOpen className="h-4 w-4 text-white/60" />
-              </div>
-              <div className="p-2 rounded hover:bg-white/5 cursor-pointer" title="Terminals">
-                <Terminal className="h-4 w-4 text-white/60" />
-              </div>
             </div>
           )}
 
@@ -353,14 +312,14 @@ export function Sidebar({
                   onClick={toggleMachine}
                   className={`flex-1 group relative overflow-hidden rounded-lg border transition-all duration-300 ease-in-out ${
                     machineRunning
-                      ? "bg-white/5 hover:bg-white/10 text-white/90 border-white/20 hover:border-white/30"
-                      : "bg-white/5 hover:bg-white/10 text-white/90 border-white/20 hover:border-white/30"
+                      ? "bg-red-500/10 hover:bg-red-500/20 text-white border-red-500/30 hover:border-red-500/50"
+                      : "bg-green-500/10 hover:bg-green-500/20 text-white border-green-500/30 hover:border-green-500/50"
                   } backdrop-blur-sm`}
                 >
                   <div className="flex items-center justify-center py-3 px-4">
                     <div
                       className={`flex items-center justify-center w-5 h-5 rounded-full mr-3 transition-all duration-300 ${
-                        machineRunning ? "bg-red-500/20 text-red-400" : "bg-green-500/20 text-green-400"
+                        machineRunning ? "bg-red-500/30 text-red-300" : "bg-green-500/30 text-green-300"
                       }`}
                     >
                       <Power
@@ -369,7 +328,7 @@ export function Sidebar({
                         }`}
                       />
                     </div>
-                    <span className="text-sm font-medium tracking-wide">
+                    <span className="text-sm font-medium tracking-wide text-white">
                       {machineRunning ? "Stop Machine" : "Start Machine"}
                     </span>
                   </div>
@@ -384,14 +343,18 @@ export function Sidebar({
                 <div className="relative">
                   <button
                     onClick={() => setShowShutdownMenu(!showShutdownMenu)}
-                    className="h-full px-3 rounded-lg border border-white/20 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/90 transition-all duration-200 backdrop-blur-sm"
+                    className="h-full px-3 rounded-lg border border-white/30 bg-white/10 hover:bg-white/20 text-white hover:text-white transition-all duration-200 backdrop-blur-sm"
                     title="Automatic shutdown settings"
                   >
                     <Clock className="h-4 w-4" />
                   </button>
 
                   {showShutdownMenu && (
-                    <div className="absolute bottom-full right-0 mb-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl backdrop-blur-sm z-50">
+                    <div
+                      className="absolute bottom-full right-0 mb-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-xl backdrop-blur-sm z-50"
+                      onMouseEnter={handleMouseEnter}
+                      onMouseLeave={handleMouseLeave}
+                    >
                       <div className="p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <Clock className="h-4 w-4 text-white/60" />
