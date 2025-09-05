@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef } from "react"
-import { RichTextEditor } from "./rich-text-editor"
+import { RichTextEditor } from "../richtext/RichTextEditor"
 import { CellContextMenu } from "./cell-context-menu"
 import { MoreVertical, Trash2, Copy, Lock } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"

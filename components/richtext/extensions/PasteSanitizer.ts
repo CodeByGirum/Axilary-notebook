@@ -1,5 +1,4 @@
 import { Extension } from "@tiptap/core"
-import { Plugin, PluginKey } from "@prosemirror/state"
 
 /**
  * Flattens pasted nested blocks and prevents deeply nested structures
@@ -9,10 +8,10 @@ export const PasteSanitizer = Extension.create({
 
   addProseMirrorPlugins() {
     return [
-      new Plugin({
-        key: new PluginKey("pasteSanitizer"),
+      {
+        key: "pasteSanitizer",
         props: {
-          transformPastedHTML(html) {
+          transformPastedHTML(html: string) {
             // Create temporary DOM to parse and flatten
             const tempDiv = document.createElement("div")
             tempDiv.innerHTML = html
@@ -47,7 +46,7 @@ export const PasteSanitizer = Extension.create({
             return tempDiv.innerHTML
           },
         },
-      }),
+      },
     ]
   },
 })

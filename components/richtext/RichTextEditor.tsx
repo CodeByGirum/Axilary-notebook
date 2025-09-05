@@ -5,7 +5,6 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { cn } from "@/lib/utils"
 import { RichTextToolbar } from "../notebook/rich-text-toolbar"
 import { SelectionContextMenu } from "../notebook/selection-context-menu"
-import { useRichTextSelection } from "./hooks/useRichTextSelection"
 import { useTypingIndicator } from "./hooks/useTypingIndicator"
 import { useEditorProps } from "./hooks/useEditorProps"
 import { TitleSize, getTitleClassName } from "./titleSize"
@@ -116,51 +115,12 @@ export function RichTextEditor({
 
   const handleKeyDown = useCallback(
     (view: any, event: KeyboardEvent) => {
-      if (event.key === "Home") {
-        const { selection } = view.state
-        const $pos = view.state.doc.resolve(selection.from)
-        const lineStart = $pos.pos - $pos.textOffset
-
-        if (event.shiftKey) {
-          view.dispatch(
-            view.state.tr.setSelection(
-              view.state.selection.constructor.create(view.state.doc, lineStart, selection.to),
-            ),
-          )
-        } else {
-          view.dispatch(
-            view.state.tr.setSelection(view.state.selection.constructor.near(view.state.doc.resolve(lineStart))),
-          )
-        }
-        return true
-      }
-
-      if (event.key === "End") {
-        const { selection } = view.state
-        const $pos = view.state.doc.resolve(selection.to)
-        const lineEnd = $pos.pos + ($pos.parent.textContent.length - $pos.textOffset)
-
-        if (event.shiftKey) {
-          view.dispatch(
-            view.state.tr.setSelection(
-              view.state.selection.constructor.create(view.state.doc, selection.from, lineEnd),
-            ),
-          )
-        } else {
-          view.dispatch(
-            view.state.tr.setSelection(view.state.selection.constructor.near(view.state.doc.resolve(lineEnd))),
-          )
-        }
-        return true
-      }
-
       if (event.key === "Backspace" && view.state.doc.textContent.trim() === "") {
         if (onEmptyBackspace) {
           onEmptyBackspace()
         }
         return true
       }
-
       return false
     },
     [onEmptyBackspace],
@@ -180,15 +140,14 @@ export function RichTextEditor({
     return false
   }, [])
 
-  const selectionHandlers = useRichTextSelection(
-    selectionState,
-    (updates) => setSelectionState((prev) => ({ ...prev, ...updates })),
-    multiSelections,
-    setMultiSelections,
-    editorRef,
-    findWordBoundary,
-    createSmartSelection,
-  )
+  const selectionHandlers = {
+    handleClick: () => false,
+    handleMouseDown: () => false,
+    handleMouseMove: () => false,
+    handleMouseUp: () => false,
+    handleMouseLeave: () => false,
+    handleDoubleClick: () => false,
+  }
 
   const { extensions, editorProps } = useEditorProps({
     isTitle,

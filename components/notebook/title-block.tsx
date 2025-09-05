@@ -1,6 +1,6 @@
 "use client"
 
-import { RichTextEditor } from "./rich-text-editor"
+import { RichTextEditor } from "../richtext/RichTextEditor"
 
 interface TitleBlockProps {
   value: string

@@ -13,21 +13,6 @@ import { TextStyle } from "@tiptap/extension-text-style"
 import TaskList from "@tiptap/extension-task-list"
 import TaskItem from "@tiptap/extension-task-item"
 import { cn } from "@/lib/utils"
-import { NoNestedMarks } from "../extensions/NoNestedMarks"
-import { PasteSanitizer } from "../extensions/PasteSanitizer"
-
-// Legacy extensions for backward compatibility
-const LockedHeaders = StarterKit.configure({
-  heading: { levels: [1, 2, 3, 4] },
-}).extensions.find((ext) => ext.name === "heading")
-
-const ExcelSelection = StarterKit.configure({}).extensions.find((ext) => ext.name === "history")
-
-const CursorStyling = TextStyle.configure({
-  HTMLAttributes: { class: "cursor-blink" },
-})
-
-const MouseDragSelection = TextStyle.configure({})
 
 interface EditorPropsConfig {
   isTitle: boolean
@@ -63,9 +48,7 @@ export function useEditorProps({
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
       }),
-      TextStyle.configure({
-        HTMLAttributes: { class: "text-style" },
-      }),
+      TextStyle,
       Underline,
       Superscript,
       Subscript,
@@ -80,8 +63,6 @@ export function useEditorProps({
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      NoNestedMarks,
-      PasteSanitizer,
     ],
     [],
   )
