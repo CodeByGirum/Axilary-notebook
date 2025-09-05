@@ -47,10 +47,11 @@ export function useEditorProps({
     () => [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4] },
-        link: false, // Disable built-in link to use custom Link extension
+        link: false, // Disable built-in link to use our custom Link extension
+        underline: false, // Disable built-in underline to use our custom Underline extension
       }),
       TextStyle,
-      Underline, // Custom underline extension
+      Underline,
       Superscript,
       Subscript,
       Highlight.configure({ multicolor: true }),
