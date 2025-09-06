@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useRef } from "react"
-import { RichTextEditor } from "../richtext/RichTextEditor"
+import TextEditor from "../text-editor/text-editor"
 import { CellContextMenu } from "./cell-context-menu"
 import { MoreVertical, Trash2, Copy, Lock } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -81,11 +81,9 @@ export function TextSection({
     try {
       const text = await navigator.clipboard.readText()
       if (text) {
-        // Use execCommand for better compatibility
         if (document.execCommand) {
           document.execCommand("insertText", false, text)
         } else {
-          // Fallback for modern browsers
           const selection = window.getSelection()
           if (selection && selection.rangeCount > 0) {
             const range = selection.getRangeAt(0)
@@ -106,7 +104,6 @@ export function TextSection({
       const range = selection.getRangeAt(0)
       const textContent = editorRef.current.textContent || ""
 
-      // Get cursor position in text
       let cursorPos = 0
       const walker = document.createTreeWalker(editorRef.current, NodeFilter.SHOW_TEXT, null)
 
@@ -154,7 +151,6 @@ export function TextSection({
 
   const handleMouseLeave = () => {
     console.log("[v0] Text cell hover ended")
-    // Don't hide if dropdown is open
     if (!isDropdownOpen) {
       setIsHovered(false)
     }
@@ -242,13 +238,20 @@ export function TextSection({
         </div>
       )}
 
-      <RichTextEditor
-        content={value}
-        onChange={onChange}
-        placeholder={placeholder}
+      <TextEditor
+        initialContent={value}
+        config={{
+          placeholder,
+          readOnly: isLocked || readOnly,
+          showToolbar: true,
+          autoSave: true,
+          autoSaveDelay: 500,
+        }}
+        callbacks={{
+          onUpdate: (content) => onChange(content.content),
+          onEmptyBackspace: onEmptyDelete,
+        }}
         className="text-base leading-relaxed"
-        readOnly={isLocked || readOnly}
-        onEmptyBackspace={handleEmptyBackspace}
       />
 
       <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-neutral-700/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />

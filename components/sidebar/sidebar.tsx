@@ -243,7 +243,7 @@ export function Sidebar({
                   <span className="text-sm font-medium text-white/80 truncate">Machine</span>
                 </div>
                 <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-                  <SelectTrigger className="bg-black/40 border-white/30 text-white hover:bg-black/50 text-xs w-full">
+                  <SelectTrigger className="text-white hover:bg-black/50 text-xs w-full border-transparent border-dashed bg-transparent">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1a1a] border-white/10" onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -274,7 +274,7 @@ export function Sidebar({
                   <span className="text-sm font-medium text-white/80 truncate">Environment</span>
                 </div>
                 <Select value={selectedEnvironment} onValueChange={setSelectedEnvironment}>
-                  <SelectTrigger className="bg-black/40 border-white/30 text-white hover:bg-black/50 text-xs w-full">
+                  <SelectTrigger className="text-white hover:bg-black/50 text-xs w-full bg-transparent border-transparent">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1a1a1a] border-white/10" onCloseAutoFocus={(e) => e.preventDefault()}>

@@ -1,24 +1,16 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Square, RotateCcw, PlayCircle, Trash2 } from "lucide-react"
+import { PlayCircle, Trash2 } from "lucide-react"
 import { useState } from "react"
 
 interface NotebookToolbarProps {
   onExecuteAll: () => void
-  onRestartKernel: () => void
-  onInterruptExecution: () => void
   onClearAll: () => void
   isExecuting: boolean
 }
 
-export function NotebookToolbar({
-  onExecuteAll,
-  onRestartKernel,
-  onInterruptExecution,
-  onClearAll,
-  isExecuting,
-}: NotebookToolbarProps) {
+export function NotebookToolbar({ onExecuteAll, onClearAll, isExecuting }: NotebookToolbarProps) {
   const [showClearConfirm, setShowClearConfirm] = useState(false)
 
   const handleClearAll = () => {
@@ -56,28 +48,6 @@ export function NotebookToolbar({
         <PlayCircle className="h-2.5 w-2.5 mr-1" />
         Run All
       </Button>
-
-      {isExecuting ? (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onInterruptExecution}
-          className="bg-transparent border-red-500/20 text-red-400 hover:bg-red-500/10 text-xs px-2 py-1 h-6"
-        >
-          <Square className="h-2.5 w-2.5 mr-1" />
-          Interrupt
-        </Button>
-      ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRestartKernel}
-          className="bg-transparent border-white/10 text-white/60 hover:bg-white/5 hover:text-white text-xs px-2 py-1 h-6"
-        >
-          <RotateCcw className="h-2.5 w-2.5 mr-1" />
-          Restart
-        </Button>
-      )}
 
       <div className="text-[8px] text-white/40 ml-auto">{isExecuting ? "Executing..." : "Ready"}</div>
 

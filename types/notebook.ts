@@ -1,5 +1,13 @@
 export type CellType = "python" | "r" | "sql" | "chart" | "gpu" | "table" | "params" | "prompt"
 
+export type SeparatorStyle = "line" | "dotted" | "dashed" | "thick"
+
+export interface SeparatorData {
+  id: string
+  style: SeparatorStyle
+  order: number
+}
+
 export interface CellMetadata {
   title: string
   locked?: boolean
@@ -29,5 +37,5 @@ export interface CellExecutionResult {
 
 export interface AddCellMenuProps {
   onAddCell: (type: CellType) => void
-  onAddSeparator?: (style: string) => void
+  onAddSeparator?: (style: SeparatorStyle) => void // Updated to use SeparatorStyle type
 }

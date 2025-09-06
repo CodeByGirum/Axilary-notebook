@@ -14,19 +14,23 @@ interface TextSectionData {
   order: number
 }
 
-interface NotebookPublisherProps {
-  cells?: NotebookCellData[]
-  title?: string
-  textSections?: TextSectionData[]
+interface NotebookPublishSectionProps {
+  cells: NotebookCellData[]
+  title: string
+  textSections: TextSectionData[]
   separators?: SeparatorData[] // Added separators prop
+  onShare: () => void
+  onExport: () => void
+  onGoToPreview: () => void
+  onGoToEdit: () => void
 }
 
-export function NotebookPublisher({
+export function NotebookPublishSection({
   cells: propCells,
   title = "Welcome to Axilary Notebook",
   textSections = [],
   separators = [], // Added separators with default empty array
-}: NotebookPublisherProps) {
+}: NotebookPublishSectionProps) {
   const [cells, setCells] = useState<NotebookCellData[]>([])
 
   useEffect(() => {

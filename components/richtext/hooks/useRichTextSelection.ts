@@ -23,9 +23,25 @@ interface SelectionState {
   lastClickTime: number
 }
 
-/**
- * Manages text selection and mouse handlers with requestAnimationFrame throttling
- */
+const createSelection = (view: any, from: number, to: number) => {
+  view.dispatch(view.state.tr.setSelection(view.state.selection.constructor.create(view.state.doc, from, to)))
+}
+
+const setCursorStyle = (view: any, style: string) => {
+  const editorElement = view.dom as HTMLElement
+  editorElement.style.cursor = style
+}
+
+const resetDragState = (setSelectionState: any) => {
+  setSelectionState({
+    isDragging: false,
+    dragStartPos: null,
+    lastDragPos: null,
+    dragDeleteMode: false,
+    wordBoundarySnap: false,
+  })
+}
+
 export function useRichTextSelection(
   selectionState: SelectionState,
   setSelectionState: (updates: Partial<SelectionState>) => void,
@@ -52,7 +68,7 @@ export function useRichTextSelection(
         if (!selectionState.isDragging || selectionState.dragStartPos === null) return
 
         const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })
-        if (!pos) return
+        if (!pos || selectionState.lastDragPos === pos.pos) return
 
         const { from, to, direction } = createSmartSelection(
           view,
@@ -61,15 +77,11 @@ export function useRichTextSelection(
           selectionState.wordBoundarySnap,
         )
 
-        if (selectionState.lastDragPos !== pos.pos) {
-          setSelectionState({ lastDragPos: pos.pos })
+        setSelectionState({ lastDragPos: pos.pos })
 
-          if (from !== to) {
-            view.dispatch(view.state.tr.setSelection(view.state.selection.constructor.create(view.state.doc, from, to)))
-
-            const editorElement = view.dom as HTMLElement
-            editorElement.style.cursor = direction === "forward" ? "text" : "w-resize"
-          }
+        if (from !== to) {
+          createSelection(view, from, to)
+          setCursorStyle(view, direction === "forward" ? "text" : "w-resize")
         }
       })
     },
@@ -109,19 +121,15 @@ export function useRichTextSelection(
         return true
       }
 
-      // Handle triple-click for paragraph selection
-      if (timeDiff < 500) {
-        setSelectionState({ clickCount: selectionState.clickCount + 1 })
-      } else {
-        setSelectionState({ clickCount: 1 })
-      }
-      setSelectionState({ lastClickTime: now })
+      // Handle click count for multi-click selection
+      const newClickCount = timeDiff < 500 ? selectionState.clickCount + 1 : 1
+      setSelectionState({ clickCount: newClickCount, lastClickTime: now })
 
-      if (selectionState.clickCount === 2) {
+      if (newClickCount === 2) {
         const $pos = view.state.doc.resolve(pos)
         const start = $pos.start($pos.depth)
         const end = $pos.end($pos.depth)
-        view.dispatch(view.state.tr.setSelection(view.state.selection.constructor.create(view.state.doc, start, end)))
+        createSelection(view, start, end)
         return true
       }
 
@@ -130,7 +138,7 @@ export function useRichTextSelection(
         const { selection } = view.state
         const from = Math.min(selection.from, pos)
         const to = Math.max(selection.to, pos)
-        view.dispatch(view.state.tr.setSelection(view.state.selection.constructor.create(view.state.doc, from, to)))
+        createSelection(view, from, to)
         return true
       }
 
@@ -166,7 +174,6 @@ export function useRichTextSelection(
       })
 
       view.dispatch(view.state.tr.setSelection(view.state.selection.constructor.near(view.state.doc.resolve(pos.pos))))
-
       return false
     },
     [setSelectionState],
@@ -194,7 +201,7 @@ export function useRichTextSelection(
         )
 
         if (from !== to) {
-          view.dispatch(view.state.tr.setSelection(view.state.selection.constructor.create(view.state.doc, from, to)))
+          createSelection(view, from, to)
         }
       }
 
@@ -206,17 +213,8 @@ export function useRichTextSelection(
         }
       }
 
-      setSelectionState({
-        isDragging: false,
-        dragStartPos: null,
-        lastDragPos: null,
-        dragDeleteMode: false,
-        wordBoundarySnap: false,
-      })
-
-      const editorElement = view.dom as HTMLElement
-      editorElement.style.cursor = "text"
-
+      resetDragState(setSelectionState)
+      setCursorStyle(view, "text")
       return false
     },
     [
@@ -232,16 +230,8 @@ export function useRichTextSelection(
   const handleMouseLeave = useCallback(
     (view: any, event: MouseEvent) => {
       if (selectionState.isDragging) {
-        setSelectionState({
-          isDragging: false,
-          dragStartPos: null,
-          lastDragPos: null,
-          dragDeleteMode: false,
-          wordBoundarySnap: false,
-        })
-
-        const editorElement = view.dom as HTMLElement
-        editorElement.style.cursor = "text"
+        resetDragState(setSelectionState)
+        setCursorStyle(view, "text")
       }
       return false
     },
@@ -259,13 +249,10 @@ export function useRichTextSelection(
       try {
         const wordStart = findWordBoundary(view.state.doc, safePos, "start")
         const wordEnd = findWordBoundary(view.state.doc, safePos, "end")
-
         const boundedStart = Math.max(0, Math.min(wordStart, docSize))
         const boundedEnd = Math.max(0, Math.min(wordEnd, docSize))
 
-        view.dispatch(
-          view.state.tr.setSelection(view.state.selection.constructor.create(view.state.doc, boundedStart, boundedEnd)),
-        )
+        createSelection(view, boundedStart, boundedEnd)
       } catch (error) {
         console.warn("[v0] Double-click word selection failed, falling back to character selection:", error)
         view.dispatch(

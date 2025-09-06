@@ -1,13 +1,13 @@
 "use client"
 
 import { useCallback } from "react"
-import type { NotebookItem, NotebookCellData, TextSectionData } from "./NotebookItems"
+import type { NotebookItem, NotebookCellData, TextSectionData, SeparatorData } from "./NotebookItems"
 import { separateItems } from "./NotebookItems"
 
 interface UseNotebookReorderProps {
   items: NotebookItem[]
   selectedCells: Set<string>
-  onItemsChange: (cells: NotebookCellData[], textSections: TextSectionData[]) => void
+  onItemsChange: (cells: NotebookCellData[], textSections: TextSectionData[], separators: SeparatorData[]) => void
 }
 
 export function useNotebookReorder({ items, selectedCells, onItemsChange }: UseNotebookReorderProps) {
@@ -23,8 +23,8 @@ export function useNotebookReorder({ items, selectedCells, onItemsChange }: UseN
         data: { ...item.data, order: index },
       }))
 
-      const { cells, textSections } = separateItems(updatedItems)
-      onItemsChange(cells, textSections)
+      const { cells, textSections, separators } = separateItems(updatedItems)
+      onItemsChange(cells, textSections, separators)
     },
     [onItemsChange],
   )

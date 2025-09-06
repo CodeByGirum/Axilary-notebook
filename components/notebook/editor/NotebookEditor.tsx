@@ -8,16 +8,18 @@ import { NotebookToolbar } from "../notebook-toolbar"
 import { TitleBlock } from "../title-block"
 import { TextSection } from "../text-section"
 import { BlockSeparator } from "../block-separator"
+import { SeparatorBlock } from "../separator-block" // Added separator block import
 import { SelectionOverlay } from "../selection-overlay"
 import { FloatingSelectionToolbar } from "../floating-selection-toolbar"
 import { useCellSelection } from "@/hooks/use-cell-selection"
 import { useNotebookEngine } from "@/hooks/use-notebook-engine"
-import type { CellType, NotebookCellData } from "@/types/notebook"
+import type { CellType, NotebookCellData, SeparatorData, SeparatorStyle } from "@/types/notebook" // Added SeparatorData and SeparatorStyle imports
 
 import {
   combineIntoItems,
   separateItems,
   calculateNextOrder,
+  generateId, // Added generateId import
   type NotebookItem,
   type TextSectionData,
 } from "./NotebookItems"
@@ -31,22 +33,27 @@ interface NotebookEditorProps {
   initialCells?: NotebookCellData[]
   initialTitle?: string
   initialTextSections?: TextSectionData[]
+  initialSeparators?: SeparatorData[] // Added initial separators prop
   onCellsChange?: (cells: NotebookCellData[]) => void
   onTitleChange?: (title: string) => void
   onTextSectionsChange?: (textSections: TextSectionData[]) => void
+  onSeparatorsChange?: (separators: SeparatorData[]) => void // Added separators change callback
 }
 
 export function NotebookEditor({
   initialCells = [],
   initialTitle = "Welcome to Axilary Notebook",
   initialTextSections = [],
+  initialSeparators = [], // Added initial separators with default
   onCellsChange,
   onTitleChange,
   onTextSectionsChange,
+  onSeparatorsChange, // Added separators change callback
 }: NotebookEditorProps) {
   const [title, setTitle] = useState(initialTitle)
   const [cells, setCells] = useState<NotebookCellData[]>(initialCells)
   const [textSections, setTextSections] = useState<TextSectionData[]>(initialTextSections)
+  const [separators, setSeparators] = useState<SeparatorData[]>(initialSeparators) // Added separators state
   const [nextOrder, setNextOrder] = useState(0)
   const initializedRef = useRef(false)
 
@@ -65,11 +72,11 @@ export function NotebookEditor({
     handleKeyDown,
   } = useCellSelection()
 
-  const items = combineIntoItems(cells, textSections)
+  const items = combineIntoItems(cells, textSections, separators) // Added separators to combineIntoItems
 
   useEffect(() => {
     if (!initializedRef.current) {
-      const allItems = [...initialCells, ...initialTextSections]
+      const allItems = [...initialCells, ...initialTextSections, ...initialSeparators] // Added separators to initialization
       const maxOrder = allItems.length > 0 ? Math.max(...allItems.map((item) => item.order || 0)) : -1
       setNextOrder(maxOrder + 1)
       initializedRef.current = true
@@ -79,6 +86,7 @@ export function NotebookEditor({
   const onCellsChangeRef = useRef(onCellsChange)
   const onTitleChangeRef = useRef(onTitleChange)
   const onTextSectionsChangeRef = useRef(onTextSectionsChange)
+  const onSeparatorsChangeRef = useRef(onSeparatorsChange) // Added separators change callback ref
 
   useEffect(() => {
     onCellsChangeRef.current = onCellsChange
@@ -91,6 +99,10 @@ export function NotebookEditor({
   useEffect(() => {
     onTextSectionsChangeRef.current = onTextSectionsChange
   }, [onTextSectionsChange])
+
+  useEffect(() => {
+    onSeparatorsChangeRef.current = onSeparatorsChange // Added separators change callback ref update
+  }, [onSeparatorsChange])
 
   useEffect(() => {
     if (onCellsChangeRef.current) {
@@ -110,11 +122,22 @@ export function NotebookEditor({
     }
   }, [textSections])
 
-  const handleItemsChange = useCallback((newCells: NotebookCellData[], newTextSections: TextSectionData[]) => {
-    setCells(newCells)
-    setTextSections(newTextSections)
-    setNextOrder(calculateNextOrder(combineIntoItems(newCells, newTextSections)))
-  }, [])
+  useEffect(() => {
+    if (onSeparatorsChangeRef.current) {
+      onSeparatorsChangeRef.current(separators) // Added separators state update
+    }
+  }, [separators])
+
+  const handleItemsChange = useCallback(
+    (newCells: NotebookCellData[], newTextSections: TextSectionData[], newSeparators: SeparatorData[] = []) => {
+      // Added separators parameter
+      setCells(newCells)
+      setTextSections(newTextSections)
+      setSeparators(newSeparators) // Set separators state
+      setNextOrder(calculateNextOrder(combineIntoItems(newCells, newTextSections, newSeparators))) // Include separators in calculation
+    },
+    [],
+  )
 
   const handleItemsInsert = useCallback(
     (newItems: NotebookItem[], insertionIndex: number) => {
@@ -134,9 +157,9 @@ export function NotebookEditor({
 
       // Combine all items and separate
       const allItems = [...updatedItems, ...newItems].sort((a, b) => a.order - b.order)
-      const { cells: newCells, textSections: newTextSections } = separateItems(allItems)
+      const { cells: newCells, textSections: newTextSections, separators: newSeparators } = separateItems(allItems) // Added separators destructuring
 
-      handleItemsChange(newCells, newTextSections)
+      handleItemsChange(newCells, newTextSections, newSeparators) // Pass separators to handleItemsChange
     },
     [items, cells, textSections, saveStateForUndo, handleItemsChange],
   )
@@ -147,10 +170,11 @@ export function NotebookEditor({
 
       const newCells = cells.filter((cell) => !itemIds.has(cell.id))
       const newTextSections = textSections.filter((section) => !itemIds.has(section.id))
+      const newSeparators = separators.filter((separator) => !itemIds.has(separator.id)) // Added separator filtering
 
-      handleItemsChange(newCells, newTextSections)
+      handleItemsChange(newCells, newTextSections, newSeparators) // Pass separators to handleItemsChange
     },
-    [cells, textSections, saveStateForUndo, handleItemsChange],
+    [cells, textSections, separators, saveStateForUndo, handleItemsChange], // Added separators dependency
   )
 
   const { handleDragEnd, handleMoveUp, handleMoveDown } = useNotebookReorder({
@@ -217,7 +241,7 @@ export function NotebookEditor({
   const handleUndo = useCallback(() => {
     const previousState = undo()
     if (previousState) {
-      handleItemsChange(previousState.cells, previousState.textSections)
+      handleItemsChange(previousState.cells, previousState.textSections, previousState.separators) // Pass separators to handleItemsChange
       clearSelection()
       console.log("[v0] Undid last action")
     }
@@ -240,10 +264,6 @@ export function NotebookEditor({
     },
     [deleteCell, deleteTextSection],
   )
-
-  const handleAddSeparator = useCallback((style: string) => {
-    // Implementation for adding separator
-  }, [])
 
   const convertCellToText = useCallback(
     (cellId: string) => {
@@ -279,6 +299,36 @@ export function NotebookEditor({
       setCells([...cells, newCell])
     },
     [textSections, cells],
+  )
+
+  const handleAddSeparator = useCallback(
+    (style: string) => {
+      const newSeparator: SeparatorData = {
+        id: generateId("separator"),
+        style: style as SeparatorStyle,
+        order: nextOrder,
+      }
+
+      setSeparators([...separators, newSeparator])
+      setNextOrder(nextOrder + 1)
+      console.log("[v0] Added separator with style:", style)
+    },
+    [separators, nextOrder],
+  )
+
+  const deleteSeparator = useCallback(
+    (id: string) => {
+      setSeparators(separators.filter((sep) => sep.id !== id))
+    },
+    [separators],
+  )
+
+  const handleSeparatorStyleChange = useCallback(
+    (id: string, style: SeparatorStyle) => {
+      setSeparators(separators.map((sep) => (sep.id === id ? { ...sep, style } : sep)))
+      console.log("[v0] Changed separator style to:", style)
+    },
+    [separators],
   )
 
   useEffect(() => {
@@ -371,16 +421,17 @@ export function NotebookEditor({
         onClearAll={handleClearAll}
         isExecuting={isExecuting}
       />
-
       <TitleBlock value={title} onChange={setTitle} placeholder="Untitled Notebook" />
-
       <div
         ref={containerRef}
         className="relative"
         onMouseDown={(e) => {
           // Only start marquee if clicking on empty space (not on a cell)
           const target = e.target as HTMLElement
-          const isEmptySpace = !target.closest("[data-cell-id]") && !target.closest("[data-text-section-id]")
+          const isEmptySpace =
+            !target.closest("[data-cell-id]") &&
+            !target.closest("[data-text-section-id]") &&
+            !target.closest("[data-separator-id]") // Added separator check
 
           if (isEmptySpace) {
             startMarqueeSelection(e.nativeEvent)
@@ -425,9 +476,16 @@ export function NotebookEditor({
                             ? "shadow-2xl shadow-blue-500/20"
                             : ""
                         }`}
-                        id={item.type === "text" ? `text-section-${item.id}` : `cell-${item.id}`}
+                        id={
+                          item.type === "text"
+                            ? `text-section-${item.id}`
+                            : item.type === "separator"
+                              ? `separator-${item.id}`
+                              : `cell-${item.id}`
+                        } // Added separator ID handling
                         data-cell-id={item.id}
                         data-text-section-id={item.type === "text" ? item.id : undefined}
+                        data-separator-id={item.type === "separator" ? item.id : undefined} // Added separator data attribute
                         onClick={(e) => handleCellClick(item.id, e)}
                       >
                         {item.type === "text" ? (
@@ -442,6 +500,13 @@ export function NotebookEditor({
                             onLock={() => toggleTextSectionLock(item.id)}
                             onConvertToCode={() => convertTextToCell(item.id, "python")}
                             isLocked={(item.data as TextSectionData).isLocked || false}
+                          />
+                        ) : item.type === "separator" ? (
+                          <SeparatorBlock
+                            separator={item.data as SeparatorData}
+                            onDelete={deleteSeparator}
+                            onStyleChange={handleSeparatorStyleChange}
+                            dragHandleProps={provided.dragHandleProps}
                           />
                         ) : (
                           <NotebookCell
@@ -469,7 +534,6 @@ export function NotebookEditor({
 
         <SelectionOverlay selectionRect={selectionState.selectionRect} isSelecting={selectionState.isSelecting} />
       </div>
-
       {selectionState.selectedCells.size > 0 && (
         <FloatingSelectionToolbar
           selectedCount={selectionState.selectedCells.size}
@@ -482,8 +546,8 @@ export function NotebookEditor({
           onClear={clearSelection}
         />
       )}
-
-      <BlockSeparator onAddCell={handleAddCell} onAddSeparator={(style) => handleAddSeparator(style)} />
+      <BlockSeparator onAddCell={handleAddCell} onAddSeparator={handleAddSeparator} />{" "}
+      {/* Updated to use implemented handleAddSeparator */}
     </div>
   )
 }

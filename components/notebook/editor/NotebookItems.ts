@@ -1,10 +1,10 @@
 import { nanoid } from "nanoid"
-import type { NotebookCellData } from "@/types/notebook"
+import type { NotebookCellData, SeparatorData } from "@/types/notebook"
 
 export interface NotebookItem {
   id: string
-  type: "cell" | "text"
-  data: NotebookCellData | TextSectionData
+  type: "cell" | "text" | "separator" // Added separator type
+  data: NotebookCellData | TextSectionData | SeparatorData // Added SeparatorData
   order: number
 }
 
@@ -38,9 +38,13 @@ export function sortItemsByOrder(items: NotebookItem[]): NotebookItem[] {
 }
 
 /**
- * Combines cells and text sections into a unified item array
+ * Combines cells, text sections, and separators into a unified item array
  */
-export function combineIntoItems(cells: NotebookCellData[], textSections: TextSectionData[]): NotebookItem[] {
+export function combineIntoItems(
+  cells: NotebookCellData[],
+  textSections: TextSectionData[],
+  separators: SeparatorData[] = [], // Added separators parameter
+): NotebookItem[] {
   const items: NotebookItem[] = [
     ...textSections.map((section) => ({
       id: section.id,
@@ -54,30 +58,41 @@ export function combineIntoItems(cells: NotebookCellData[], textSections: TextSe
       data: cell,
       order: cell.order || 0,
     })),
+    ...separators.map((separator) => ({
+      id: separator.id,
+      type: "separator" as const,
+      data: separator,
+      order: separator.order,
+    })),
   ]
 
   return sortItemsByOrder(items)
 }
 
 /**
- * Separates items back into cells and text sections
+ * Separates items back into cells, text sections, and separators
  */
 export function separateItems(items: NotebookItem[]): {
   cells: NotebookCellData[]
   textSections: TextSectionData[]
+  separators: SeparatorData[] // Added separators return type
 } {
   const cells: NotebookCellData[] = []
   const textSections: TextSectionData[] = []
+  const separators: SeparatorData[] = [] // Added separators array
 
   items.forEach((item) => {
     if (item.type === "text") {
       textSections.push(item.data as TextSectionData)
+    } else if (item.type === "separator") {
+      // Added separator handling
+      separators.push(item.data as SeparatorData)
     } else {
       cells.push(item.data as NotebookCellData)
     }
   })
 
-  return { cells, textSections }
+  return { cells, textSections, separators }
 }
 
 /**
