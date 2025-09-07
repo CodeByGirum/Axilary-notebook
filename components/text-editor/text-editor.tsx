@@ -37,6 +37,24 @@ export function TextEditor({ initialContent = "", config = {}, callbacks = {}, c
   const { isFocused, showToolbar, hasSelection, isTyping, setFocused, setSelection, setTyping } =
     useEditorState(isTitle)
 
+  const handleKeyDown = (view: any, event: KeyboardEvent) => {
+    if (event.key === "Backspace" && view.state.doc.textContent.trim() === "") {
+      callbacks.onEmptyBackspace?.()
+      return true
+    }
+    return false
+  }
+
+  const handleKeyPress = (view: any, event: KeyboardEvent) => {
+    // Allow standard clipboard shortcuts
+    if (event.ctrlKey || event.metaKey) {
+      if (event.key === "c" || event.key === "v" || event.key === "x" || event.key === "a") {
+        return false // Let browser handle these
+      }
+    }
+    return false
+  }
+
   const editor = useEditor({
     extensions,
     content: content.content,
@@ -67,7 +85,7 @@ export function TextEditor({ initialContent = "", config = {}, callbacks = {}, c
         class: cn(
           "prose prose-invert prose-sm max-w-none focus:outline-none cursor-text",
           "caret-white",
-          "select-text",
+          "select-text user-select-text",
           isTitle
             ? "leading-none min-h-[3rem] py-3 px-0 font-bold text-4xl"
             : "text-base leading-relaxed min-h-[6rem] py-4 px-3",
@@ -84,18 +102,8 @@ export function TextEditor({ initialContent = "", config = {}, callbacks = {}, c
           className,
         ),
       },
-      handleKeyDown: (view, event) => {
-        // Allow standard clipboard shortcuts
-        if ((event.ctrlKey || event.metaKey) && ["c", "v", "x", "a", "z", "y"].includes(event.key.toLowerCase())) {
-          return false // Let browser handle these operations
-        }
-
-        if (event.key === "Backspace" && view.state.doc.textContent.trim() === "") {
-          callbacks.onEmptyBackspace?.()
-          return true
-        }
-        return false
-      },
+      handleKeyDown,
+      handleKeyPress,
     },
   })
 
@@ -160,8 +168,16 @@ export function TextEditor({ initialContent = "", config = {}, callbacks = {}, c
           color: white !important;
         }
         
+        /* Enhanced text selection styling */
         .ProseMirror * {
           user-select: text !important;
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+        }
+        
+        .ProseMirror p, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror h4, .ProseMirror li {
+          cursor: text !important;
         }
       `}</style>
 
@@ -170,14 +186,13 @@ export function TextEditor({ initialContent = "", config = {}, callbacks = {}, c
       <div
         className={cn(
           "w-full cursor-text relative border border-transparent rounded-md transition-colors",
-          "select-text",
           isFocused && !readOnly && "border-blue-500/30 bg-white/[0.02]",
           readOnly && "cursor-default",
           isTitle && `font-bold ${titleSizeMap[titleSize]}`,
         )}
         onClick={() => !readOnly && editor?.commands.focus()}
       >
-        <EditorContent editor={editor} className="w-full select-text" />
+        <EditorContent editor={editor} className="w-full" />
 
         {!content.content && !readOnly && (
           <div
