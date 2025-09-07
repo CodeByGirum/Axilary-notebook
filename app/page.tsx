@@ -80,6 +80,8 @@ export default function NotebookPage() {
   const { history, historyIndex, setHistoryIndex, saveToHistory } = useHistoryState()
   const sidebarState = useSidebarState()
 
+  const effectiveSidebarWidth = viewMode === "publish" ? 0 : sidebarState.effectiveSidebarWidth
+
   useEffect(() => {
     const loadFromStorage = () => {
       const savedCells = localStorage.getItem("notebook-cells")
@@ -265,24 +267,26 @@ export default function NotebookPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white flex">
-      <Sidebar
-        isOpen={sidebarState.effectiveSidebarOpen}
-        isCollapsed={sidebarState.isSidebarCollapsed}
-        width={sidebarState.sidebarWidth}
-        onClose={() => {
-          sidebarState.setIsSidebarOpen(false)
-          sidebarState.setIsSidebarHovered(false)
-        }}
-        onToggle={sidebarHandlers.toggle}
-        onMouseEnter={sidebarHandlers.mouseEnter}
-        onMouseLeave={sidebarHandlers.mouseLeave}
-        onResizeStart={sidebarHandlers.resizeStart}
-        isResizing={sidebarState.isResizing}
-      />
+      {viewMode !== "publish" && (
+        <Sidebar
+          isOpen={sidebarState.effectiveSidebarOpen}
+          isCollapsed={sidebarState.isSidebarCollapsed}
+          width={sidebarState.sidebarWidth}
+          onClose={() => {
+            sidebarState.setIsSidebarOpen(false)
+            sidebarState.setIsSidebarHovered(false)
+          }}
+          onToggle={sidebarHandlers.toggle}
+          onMouseEnter={sidebarHandlers.mouseEnter}
+          onMouseLeave={sidebarHandlers.mouseLeave}
+          onResizeStart={sidebarHandlers.resizeStart}
+          isResizing={sidebarState.isResizing}
+        />
+      )}
 
       <div className="flex-1 flex flex-col transition-all duration-300">
         <PageHeader
-          effectiveSidebarWidth={sidebarState.effectiveSidebarWidth}
+          effectiveSidebarWidth={effectiveSidebarWidth}
           viewMode={viewMode}
           historyIndex={historyIndex}
           historyLength={history.length}
@@ -299,10 +303,7 @@ export default function NotebookPage() {
           isSidebarCollapsed={sidebarState.isSidebarCollapsed}
         />
 
-        <main
-          className="pt-16 flex-1 transition-all duration-300"
-          style={{ marginLeft: `${sidebarState.effectiveSidebarWidth}px` }}
-        >
+        <main className="pt-16 flex-1 transition-all duration-300" style={{ marginLeft: `${effectiveSidebarWidth}px` }}>
           <div className={cn("transition-all duration-300", viewMode !== "edit" ? "py-12 px-6" : "p-10")}>
             {viewMode === "edit" && (
               <NotebookEditor
