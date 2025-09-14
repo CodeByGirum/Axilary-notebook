@@ -26,6 +26,9 @@ export interface NotebookCellData {
   output?: string
   metadata: CellMetadata
   order?: number // Added order field for proper sequencing in mixed content
+  notebookId?: string // Links cell to specific notebook in database
+  createdAt?: string // ISO timestamp for creation
+  updatedAt?: string // ISO timestamp for last update
 }
 
 export interface CellExecutionResult {
@@ -38,4 +41,14 @@ export interface CellExecutionResult {
 export interface AddCellMenuProps {
   onAddCell: (type: CellType) => void
   onAddSeparator?: (style: SeparatorStyle) => void // Updated to use SeparatorStyle type
+}
+
+export interface NotebookData {
+  id: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  cells: NotebookCellData[]
+  textSections: any[]
+  separators: SeparatorData[]
 }

@@ -75,6 +75,7 @@ function useSidebarState() {
 
 export default function NotebookPage() {
   const [viewMode, setViewMode] = useState<"edit" | "preview" | "publish">("edit")
+  const [notebookId, setNotebookId] = useState<string | undefined>(undefined)
   const { cells, setCells, title, setTitle, textSections, setTextSections, separators, setSeparators } =
     useNotebookState()
   const { history, historyIndex, setHistoryIndex, saveToHistory } = useHistoryState()
@@ -84,19 +85,33 @@ export default function NotebookPage() {
 
   useEffect(() => {
     const loadFromStorage = () => {
-      const savedCells = localStorage.getItem("notebook-cells")
-      const savedTitle = localStorage.getItem("notebook-title")
-      const savedTextSections = localStorage.getItem("notebook-text-sections")
-      const savedSeparators = localStorage.getItem("notebook-separators")
-      const savedSidebarWidth = localStorage.getItem("sidebar-width")
-      const savedSidebarCollapsed = localStorage.getItem("sidebar-collapsed")
+      const urlParams = new URLSearchParams(window.location.search)
+      const urlNotebookId = urlParams.get("notebook")
+      const savedNotebookId = localStorage.getItem("current-notebook-id")
 
-      if (savedCells) setCells(JSON.parse(savedCells))
-      if (savedTitle) setTitle(savedTitle)
-      if (savedTextSections) setTextSections(JSON.parse(savedTextSections))
-      if (savedSeparators) setSeparators(JSON.parse(savedSeparators))
-      if (savedSidebarWidth) sidebarState.setSidebarWidth(Number.parseInt(savedSidebarWidth))
-      if (savedSidebarCollapsed) sidebarState.setIsSidebarCollapsed(JSON.parse(savedSidebarCollapsed))
+      if (urlNotebookId) {
+        setNotebookId(urlNotebookId)
+        localStorage.setItem("current-notebook-id", urlNotebookId)
+      } else if (savedNotebookId) {
+        setNotebookId(savedNotebookId)
+      }
+
+      // Only load from localStorage if no notebookId (fallback for existing users)
+      if (!urlNotebookId && !savedNotebookId) {
+        const savedCells = localStorage.getItem("notebook-cells")
+        const savedTitle = localStorage.getItem("notebook-title")
+        const savedTextSections = localStorage.getItem("notebook-text-sections")
+        const savedSeparators = localStorage.getItem("notebook-separators")
+        const savedSidebarWidth = localStorage.getItem("sidebar-width")
+        const savedSidebarCollapsed = localStorage.getItem("sidebar-collapsed")
+
+        if (savedCells) setCells(JSON.parse(savedCells))
+        if (savedTitle) setTitle(savedTitle)
+        if (savedTextSections) setTextSections(JSON.parse(savedTextSections))
+        if (savedSeparators) setSeparators(JSON.parse(savedSeparators))
+        if (savedSidebarWidth) sidebarState.setSidebarWidth(Number.parseInt(savedSidebarWidth))
+        if (savedSidebarCollapsed) sidebarState.setIsSidebarCollapsed(JSON.parse(savedSidebarCollapsed))
+      }
     }
 
     loadFromStorage()
@@ -311,6 +326,7 @@ export default function NotebookPage() {
                 initialTitle={title}
                 initialTextSections={textSections}
                 initialSeparators={separators}
+                notebookId={notebookId}
                 onCellsChange={handleCellsChange}
                 onTitleChange={handleTitleChange}
                 onTextSectionsChange={handleTextSectionsChange}
