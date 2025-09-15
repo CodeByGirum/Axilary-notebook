@@ -202,6 +202,26 @@ export default function NotebookPage() {
     [cells, title, textSections, saveToHistory],
   )
 
+  const handleNotebookSelect = useCallback((selectedNotebookId: string) => {
+    console.log("[v0] Switching to notebook:", selectedNotebookId)
+    setNotebookId(selectedNotebookId)
+    localStorage.setItem("current-notebook-id", selectedNotebookId)
+
+    // Update URL without page reload
+    const url = new URL(window.location.href)
+    url.searchParams.set("notebook", selectedNotebookId)
+    window.history.pushState({}, "", url.toString())
+  }, [])
+
+  const handleNewNotebook = useCallback(() => {
+    console.log("[v0] Created new notebook, clearing current state")
+    // Clear current notebook state when creating new one
+    setCells([])
+    setTitle("Welcome to Axilary Notebook")
+    setTextSections([])
+    setSeparators([])
+  }, [])
+
   const actionHandlers = {
     share: () => {
       if (navigator.share) {
@@ -296,6 +316,9 @@ export default function NotebookPage() {
           onMouseLeave={sidebarHandlers.mouseLeave}
           onResizeStart={sidebarHandlers.resizeStart}
           isResizing={sidebarState.isResizing}
+          currentNotebookId={notebookId}
+          onNotebookSelect={handleNotebookSelect}
+          onNewNotebook={handleNewNotebook}
         />
       )}
 

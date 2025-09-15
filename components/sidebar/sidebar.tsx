@@ -1,10 +1,11 @@
 "use client"
 
 import type React from "react"
+import { NotebookList } from "./notebook-list"
 
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Plus, BookOpen, Power, Cpu, Zap, Globe, X, Clock, ChevronLeft, ChevronRight } from "lucide-react"
+import { BookOpen, Power, Cpu, Zap, Globe, X, Clock, ChevronLeft, ChevronRight } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface SidebarProps {
@@ -17,6 +18,9 @@ interface SidebarProps {
   onMouseLeave?: () => void
   onResizeStart: (e: React.MouseEvent) => void
   isResizing: boolean
+  currentNotebookId?: string
+  onNotebookSelect?: (notebookId: string) => void
+  onNewNotebook?: () => void
 }
 
 export function Sidebar({
@@ -29,6 +33,9 @@ export function Sidebar({
   onMouseLeave,
   onResizeStart,
   isResizing,
+  currentNotebookId,
+  onNotebookSelect,
+  onNewNotebook,
 }: SidebarProps) {
   const [expandedSections, setExpandedSections] = useState({})
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -214,27 +221,11 @@ export function Sidebar({
 
           {isOpen && (
             <div className="flex-1 overflow-y-auto p-4 space-y-6" style={{ width: `${width - 32}px` }}>
-              {/* Notebooks Section */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <BookOpen className="h-4 w-4 text-white/60 flex-shrink-0" />
-                    <span className="text-sm font-medium text-white/80 truncate">Notebooks</span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 text-white/60 hover:text-white hover:bg-white/5 flex-shrink-0"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-                <div className="ml-6 space-y-1">
-                  <div className="text-xs text-white/60 py-1 px-2 rounded hover:bg-white/5 cursor-pointer truncate">
-                    Untitled Notebook
-                  </div>
-                </div>
-              </div>
+              <NotebookList
+                currentNotebookId={currentNotebookId}
+                onNotebookSelect={onNotebookSelect || (() => {})}
+                onNewNotebook={onNewNotebook || (() => {})}
+              />
 
               {/* Machine Section */}
               <div className="space-y-3">
